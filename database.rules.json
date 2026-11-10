@@ -1,0 +1,36 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "lc": {
+      ".read": true,
+      "$thread": {
+        "meta": {
+          ".write": true
+        },
+        "m": {
+          "$msg": {
+            ".write": true,
+            ".validate": "newData.hasChildren(['f','t','ts']) && (newData.child('f').val() == 'u' || newData.child('f').val() == 'a') && newData.child('t').isString() && newData.child('t').val().length <= 1000"
+          }
+        }
+      }
+    },
+
+    "ann": {
+      ".read": true,
+      "$id": { ".write": true }
+    },
+
+    "pd": {
+      ".read": true,
+      "$uid": { ".write": true }
+    },
+
+    "cfg": {
+      ".read": true,
+      "wa": { ".write": true }
+    }
+  }
+}
