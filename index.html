@@ -418,6 +418,8 @@ textarea.gvd-in{min-height:96px;resize:vertical}
 .av svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .av.in{position:relative;background:linear-gradient(135deg,#8b5cf6,#22d3ee);color:#060610;font:800 14px/1 system-ui;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
 .av.in:after{content:"";position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border-radius:50%;background:#22c55e;border:2px solid var(--bg2)}
+.fpl{display:block;margin:12px auto 0;background:none;border:0;color:#9aa4ff;font:inherit;font-size:13.5px;cursor:pointer;text-decoration:underline;padding:6px 10px}
+.fpl:hover{color:#c4caff}
 </style>
 <style id="desktop-mode">
 /* ===== Desktop mode (PC / laptop, 1024px+). Phone layout is unchanged. ===== */
@@ -508,6 +510,14 @@ textarea.gvd-in{min-height:96px;resize:vertical}
 </section>
 <div class="tst" id="tst"></div>
 
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,updatePassword,signOut}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+/* Firebase Auth — ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড রিসেট লিংকের জন্য */
+const firebaseConfig={apiKey:"AIzaSyCBzlzz4_uX5D8BQvtEyK9F39UsDTh9KTo",authDomain:"game-store-388f1.firebaseapp.com",projectId:"game-store-388f1",appId:"1:1098157471225:web:fb2f1bdb80cd66ae0d7928"};
+try{const app=initializeApp(firebaseConfig),auth=getAuth(app);auth.languageCode="bn";
+window.fbA={auth,create:createUserWithEmailAndPassword,signIn:signInWithEmailAndPassword,verify:sendEmailVerification,reset:sendPasswordResetEmail,upd:updatePassword,out:signOut}}catch(e){console.warn("Firebase Auth load failed",e)}
+</script>
 <script>
 const T=(n,e,h,r,u,k)=>({n,e,h,r,u,k,p:"Mobile",c:"টপ-আপ",t:1,pr:k[0][1]});
 const K=(n,p,c,pr,o,r,e,h)=>({n,p,c,pr,o,r,e,h});
@@ -663,12 +673,30 @@ function drawCart(){const ks=Object.keys(cart);
   $("tot").textContent=tk(total());const n=bn(Object.values(cart).reduce((s,x)=>s+x.q,0));$("cc").textContent=n;$("nc").textContent=n;const c=$("ncs");c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop")}
 // ===== অ্যাকাউন্ট =====
 function authM(m){mode=m||mode;const r=mode==="up",G=document.body.classList.contains("g"),h=`<div class="gb">${G?'<div class="gl">🎮</div><div class="gn">Game<i>Vault</i></div>':""}<h2>${r?"নতুন অ্যাকাউন্ট":"স্বাগতম 👋"}</h2>${G?'<p class="gs">'+(r?"কয়েক সেকেন্ডেই অ্যাকাউন্ট খুলুন":"লগইন করে সেরা গেম কিনুন")+"</p>":""}<div class="tabs"><button class="${r?"":"on"}" onclick="authM('in')">লগইন</button><button class="${r?"on":""}" onclick="authM('up')">রেজিস্ট্রেশন</button></div>
-  ${r?'<input id="an" placeholder="পূর্ণ নাম">':""}<input id="ap" type="tel" inputmode="numeric" autocomplete="tel"  placeholder="মোবাইল নম্বর (01XXXXXXXXX)"><input id="aw" type="password" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)">
+  ${r?'<input id="an" placeholder="পূর্ণ নাম">':""}<input id="ap" type="tel" inputmode="numeric" autocomplete="tel"  placeholder="মোবাইল নম্বর (01XXXXXXXXX)">${r?'<input id="ae" type="email" inputmode="email" autocomplete="email" placeholder="ইমেইল / জিমেইল (ঐচ্ছিক — পাসওয়ার্ড ভুলে গেলে কাজে লাগবে)">':""}<input id="aw" type="password" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)">
   ${r?'<input id="aw2" type="password" placeholder="পাসওয়ার্ড আবার দিন"><label class="ck"><input type="checkbox" id="ag">আমার বয়স ১৩ বছর বা তার বেশি এবং আমি শর্তাবলিতে সম্মত।</label>':""}
-  <button class="btn" style="width:100%;margin-top:8px" onclick="doAuth()">${r?"অ্যাকাউন্ট খুলুন":"লগইন করুন"}</button>${G?'<button class="btn x" onclick="enterApp(1)">শুধু দেখব — পরে লগইন করব</button>':'<button class="btn x" onclick="closeAll()">বন্ধ করুন</button>'}</div>`;
+  <button class="btn" style="width:100%;margin-top:8px" onclick="doAuth()">${r?"অ্যাকাউন্ট খুলুন":"লগইন করুন"}</button>${r?"":'<button class="fpl" onclick="fpOpen()">🔑 পাসওয়ার্ড ভুলে গেছেন?</button>'}${G?'<button class="btn x" onclick="enterApp(1)">শুধু দেখব — পরে লগইন করব</button>':'<button class="btn x" onclick="closeAll()">বন্ধ করুন</button>'}</div>`;
   if(G){$("gc").innerHTML=h}else{cartOpen(0);openM(h)}}
+const fbU=()=>/^https?:/.test(location.protocol)?{url:location.origin+location.pathname}:undefined;
+const fbErr=e=>{const c=(e&&e.code)||"";return c==="auth/email-already-in-use"?"⚠️ এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে":c==="auth/network-request-failed"?"❌ ইন্টারনেট চেক করুন":c==="auth/too-many-requests"?"⏳ অনেকবার চেষ্টা হয়েছে, একটু পরে আবার করুন":c==="auth/weak-password"?"❌ পাসওয়ার্ড কমপক্ষে ৬ অক্ষর":c==="auth/operation-not-allowed"?"⚠️ Firebase-এ Email/Password চালু করা হয়নি":(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found")?"❌ নম্বর বা পাসওয়ার্ড ভুল":c==="auth/unauthorized-continue-uri"?"⚠️ Firebase-এ সাইটের ডোমেইন Authorized domains-এ যোগ করুন":"❌ সমস্যা হয়েছে ("+c+")"};
 const normPh=s=>{s=String(s||"").replace(/[\u09e6-\u09ef]/g,d=>"০১২৩৪৫৬৭৮৯".indexOf(d)).replace(/[\u0660-\u0669]/g,d=>d.charCodeAt(0)-1632).replace(/[\u06f0-\u06f9]/g,d=>d.charCodeAt(0)-1776).replace(/[^\d+]/g,"");if(s.startsWith("+880"))s=s.slice(4);else if(s.startsWith("00880"))s=s.slice(5);else if(s.startsWith("880")&&s.length>=12)s=s.slice(3);s=s.replace(/\+/g,"");if(/^1\d{9}$/.test(s))s="0"+s;return s};
 function devLbl(){const a=navigator.userAgent;return/Android/.test(a)?"Android":/iPhone|iPad/.test(a)?"iOS":/Windows/.test(a)?"Windows":/Mac/.test(a)?"Mac":"অন্যান্য"}
+function fpOpen(){const G=document.body.classList.contains("g"),w=String(WA||""),wa=/^\d{10,15}$/.test(w);
+  const h=`<div class="gb">${G?'<div class="gl">🎮</div><div class="gn">Game<i>Vault</i></div>':""}<h2>🔑 পাসওয়ার্ড ভুলে গেছেন?</h2><p style="opacity:.75;font-size:13.5px;line-height:1.5;margin:6px 0 14px">মোবাইল নম্বর আর (থাকলে) অ্যাকাউন্টের ইমেইল দিন। ইমেইল দিয়ে খোলা অ্যাকাউন্ট হলে রিসেট লিংক সরাসরি ইমেইলে যাবে, না হলে অ্যাডমিন যাচাই করে নতুন পাসওয়ার্ড জানাবেন।</p><input id="fp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="মোবাইল নম্বর (01XXXXXXXXX)"><input id="fe" type="email" inputmode="email" autocomplete="email" placeholder="অ্যাকাউন্টের ইমেইল (ঐচ্ছিক)"><button class="btn" style="width:100%;margin-top:8px" onclick="fpSend()">📨 রিকোয়েস্ট পাঠান</button>${wa?'<button class="btn x" onclick="fpWa()">💬 হোয়াটসঅ্যাপে জানান</button>':""}<button class="btn x" onclick="authM('in')">← লগইনে ফিরুন</button></div>`;
+  if(G){$("gc").innerHTML=h}else{cartOpen(0);openM(h)}}
+function fpWa(){const p=normPh(($("fp")||{}).value||"");open("https://wa.me/"+WA+"?text="+encodeURIComponent("আমি আমার পাসওয়ার্ড ভুলে গেছি।"+(p?" মোবাইল নম্বর: "+p:"")),"_blank")}
+async function fpSend(){
+  const p=normPh($("fp").value),em=($("fe").value||"").trim().toLowerCase().slice(0,100);
+  if(!/^01\d{9}$/.test(p))return toast("❌ সঠিক মোবাইল নম্বর দিন (যেমন 01XXXXXXXXX)");
+  if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))return toast("❌ সঠিক ইমেইল দিন");
+  if(Date.now()-ld("gv_fpt",0)<60000)return toast("⏳ এক মিনিট পরে আবার চেষ্টা করুন");
+  {let r0=ld("gv_users",{})[p];if(CHAT_DB){const c=await cget("users/"+lcP(p));if(c&&c.h)r0=Object.assign({},r0||{},c)}
+   if(r0&&r0.fb&&r0.em&&(!em||em===r0.em)&&window.fbA){try{await fbA.reset(fbA.auth,r0.em,fbU())}catch(e){return toast(fbErr(e))}
+    sv("gv_fpt",Date.now());authM("in");return toast("📧 পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে")}}
+  if(!CHAT_DB)return toast("⚠️ অনলাইন সার্ভিস চালু নেই — হোয়াটসঅ্যাপে জানান");
+  let ok=0;try{const r=await fetch(CHAT_DB.replace(/\/$/,"")+"/rr/"+lcP(p)+".json",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({p,em,ts:Date.now()})});ok=r.ok}catch(e){}
+  if(!ok)return toast("❌ রিকোয়েস্ট যায়নি — ইন্টারনেট চেক করুন");
+  sv("gv_fpt",Date.now());authM("in");toast("✅ রিকোয়েস্ট পাঠানো হয়েছে — অ্যাডমিন আপনাকে নতুন পাসওয়ার্ড জানাবেন")}
 async function doAuth(){if(window._au)return;window._au=1;try{await doAuth0()}finally{window._au=0}}
 async function doAuth0(){if($("ld"))return;const lk=ld("gv_lock",0);if(Date.now()<lk)return toast("⏳ "+bn(Math.ceil((lk-Date.now())/1000))+" সেকেন্ড পরে চেষ্টা করুন");
   const p=normPh($("ap").value),w=$("aw").value,U=ld("gv_users",{});
@@ -676,11 +704,18 @@ async function doAuth0(){if($("ld"))return;const lk=ld("gv_lock",0);if(Date.now(
   if(CHAT_DB){const c=await cget("users/"+lcP(p));if(c&&c.h){U[p]=Object.assign({},U[p]||{},c);if(!c.ban)delete U[p].ban;sv("gv_users",U)}}
   if(U[p]&&U[p].ban)return toast("🚫 এই অ্যাকাউন্ট ব্লক করা হয়েছে");
   if(mode==="up"){const n=$("an").value.trim();
-    if(n.length<2)return toast("❌ নাম দিন");if(w.length<6)return toast("❌ পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");
+    if(n.length<2)return toast("❌ নাম দিন");const em=($("ae").value||"").trim().toLowerCase();if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))return toast("❌ সঠিক ইমেইল দিন");if(w.length<6)return toast("❌ পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");
     if(w!==$("aw2").value)return toast("❌ দুই পাসওয়ার্ড মেলেনি");if(!$("ag").checked)return toast("❌ শর্তে সম্মতি দিন");
     if(U[p])return toast("⚠️ এই নম্বরে অ্যাকাউন্ট আছে — লগইন করুন");
-    U[p]={n,h:H(p+w),t:Date.now(),id:uidNew(U),ll:Date.now(),lc:1,dv:devLbl()};sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(p),{n:U[p].n,h:U[p].h,t:U[p].t,id:U[p].id,ll:U[p].ll,lc:U[p].lc,dv:U[p].dv});cdb("PUT","sync/ou",Date.now())}toast("✅ অ্যাকাউন্ট খোলা হয়েছে")}
-  else{const u=U[p];if(!u||u.h!==H(p+w)){const f=(ld("gv_f",0))+1;sv("gv_f",f);if(f>=5){sv("gv_lock",Date.now()+30000);sv("gv_f",0)}return toast("❌ নম্বর বা পাসওয়ার্ড ভুল")}
+    let fbOk=0;if(em){const fb=window.fbA;if(!fb)return toast("⚠️ ইমেইল সার্ভিস লোড হয়নি — পেজ রিফ্রেশ করুন");
+      try{const c=await fb.create(fb.auth,em,w);try{await fb.verify(c.user,fbU())}catch(e2){}await fb.out(fb.auth);fbOk=1}catch(e){return toast(fbErr(e))}}
+    U[p]={n,em,h:H(p+w),t:Date.now(),id:uidNew(U),ll:Date.now(),lc:1,dv:devLbl()};if(fbOk)U[p].fb=1;sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(p),{n:U[p].n,em:U[p].em||"",h:U[p].h,t:U[p].t,id:U[p].id,ll:U[p].ll,lc:U[p].lc,dv:U[p].dv,fb:U[p].fb||0});cdb("PUT","sync/ou",Date.now())}if(U[p].fb){authM("in");return toast("📧 ইমেইলে ভেরিফিকেশন লিংক পাঠানো হয়েছে — লিংকে ক্লিক করে ভেরিফাই করুন, তারপর লগইন করুন")}toast("✅ অ্যাকাউন্ট খোলা হয়েছে")}
+  else{const u=U[p],bad=()=>{const f=(ld("gv_f",0))+1;sv("gv_f",f);if(f>=5){sv("gv_lock",Date.now()+30000);sv("gv_f",0)}};
+    if(u&&u.fb&&u.em){const fb=window.fbA;if(!fb)return toast("⚠️ ইমেইল সার্ভিস লোড হয়নি — পেজ রিফ্রেশ করুন");let c;
+      try{c=await fb.signIn(fb.auth,u.em,w)}catch(e){if(e&&e.code!=="auth/network-request-failed"&&e.code!=="auth/too-many-requests")bad();return toast(fbErr(e))}
+      if(!c.user.emailVerified){try{await fb.verify(c.user,fbU())}catch(e){}await fb.out(fb.auth);return toast("📧 আগে ইমেইল ভেরিফাই করুন — নতুন ভেরিফিকেশন লিংক পাঠানো হয়েছে")}
+      await fb.out(fb.auth)}
+    else if(!u||u.h!==H(p+w)){bad();return toast("❌ নম্বর বা পাসওয়ার্ড ভুল")}
     sv("gv_f",0);u.ll=Date.now();u.lc=(u.lc||0)+1;u.dv=devLbl();sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(p),u);cdb("PUT","sync/ou",Date.now())}toast("✅ লগইন সফল")}
   sess=p;sv("gv_sess",p);closeAll();draw();loadIn(mode==="up"?"অ্যাকাউন্ট তৈরি হচ্ছে…":"লগইন হচ্ছে…",()=>{enterApp();if(window._co){window._co=0;checkout()}})}
 function loadIn(m,cb){const d=document.createElement("div");d.id="ld";d.innerHTML=`<div class="sl">🎮</div><b>Game<i>Vault</i></b><div class="sb"></div><p>${m}</p>`;document.body.append(d);buzz();setTimeout(()=>{cb();d.classList.add("out");setTimeout(()=>d.remove(),500)},1700)}
@@ -692,8 +727,12 @@ function pfBk(){PFV==="home"||PFR==="close"?pfX():pfOpen("home")}
 function pfX(){closeAll();closeNav()}
 function pickImg(cb){const f=document.createElement("input");f.type="file";f.accept="image/*";f.onchange=()=>{const r=f.files[0];if(!r)return;const u=URL.createObjectURL(r),i=new Image();i.onload=()=>{const m=Math.min(1,240/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*m);c.height=Math.round(i.height*m);c.getContext("2d").drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);cb(c.toDataURL("image/jpeg",.8))};i.onerror=()=>toast("❌ ছবি পড়া যায়নি");i.src=u};f.click()}
 function pfAv(n){$("pfa").innerHTML=im(PFA)?`<img src="${PFA}">`:eh((n||"?").trim().charAt(0).toUpperCase())}
-function pfSave(){const n=$("pfn").value.trim();if(n.length<2)return toast("❌ নাম দিন");const U=ld("gv_users",{});if(!U[sess])return;U[sess].n=n;if(im(PFA))U[sess].av=PFA;else delete U[sess].av;sv("gv_users",U);toast("✅ প্রোফাইল আপডেট হয়েছে");pfOpen("home")}
-function pfPw(){const U=ld("gv_users",{}),u=U[sess],n=$("pw1").value;if(!u||u.h!==H(sess+$("pw0").value))return toast("❌ বর্তমান পাসওয়ার্ড ভুল");if(n.length<6)return toast("❌ নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");if(n!==$("pw2").value)return toast("❌ দুই পাসওয়ার্ড মেলেনি");u.h=H(sess+n);sv("gv_users",U);toast("✅ পাসওয়ার্ড বদলানো হয়েছে");pfOpen("home")}
+function pfSave(){const n=$("pfn").value.trim();if(n.length<2)return toast("❌ নাম দিন");const U=ld("gv_users",{});if(!U[sess])return;const em=($("pfe").value||"").trim().toLowerCase();if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))return toast("❌ সঠিক ইমেইল দিন");if(U[sess].fb&&em!==U[sess].em)return toast("❌ ভেরিফাইড ইমেইল বদলানো যাবে না");U[sess].n=n;if(em)U[sess].em=em;else delete U[sess].em;if(im(PFA))U[sess].av=PFA;else delete U[sess].av;sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(sess),U[sess]);cdb("PUT","sync/ou",Date.now())}toast("✅ প্রোফাইল আপডেট হয়েছে");pfOpen("home")}
+async function pfPw(){const U=ld("gv_users",{}),u=U[sess],n=$("pw1").value;
+  if(u&&u.fb&&u.em){if(n.length<6)return toast("❌ নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");if(n!==$("pw2").value)return toast("❌ দুই পাসওয়ার্ড মেলেনি");const fb=window.fbA;if(!fb)return toast("⚠️ ইমেইল সার্ভিস লোড হয়নি — পেজ রিফ্রেশ করুন");
+    try{const c=await fb.signIn(fb.auth,u.em,$("pw0").value);await fb.upd(c.user,n);await fb.out(fb.auth)}catch(e){return toast(e&&(e.code==="auth/invalid-credential"||e.code==="auth/wrong-password")?"❌ বর্তমান পাসওয়ার্ড ভুল":fbErr(e))}
+    toast("✅ পাসওয়ার্ড বদলানো হয়েছে");return pfOpen("home")}
+  if(!u||u.h!==H(sess+$("pw0").value))return toast("❌ বর্তমান পাসওয়ার্ড ভুল");if(n.length<6)return toast("❌ নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");if(n!==$("pw2").value)return toast("❌ দুই পাসওয়ার্ড মেলেনি");u.h=H(sess+n);sv("gv_users",U);toast("✅ পাসওয়ার্ড বদলানো হয়েছে");pfOpen("home")}
 function ohf(x){OHF=x;pfOpen("hist")}
 function pfHtml(v){PFV=v;const _ns=sess?ld("gv_nbseen_"+sess,0):0;if(v==="inbox")nbSeen();if(v==="hist")ordSeen();const u=ld("gv_users",{})[sess]||{n:""},O=ld("gv_orders",[]).filter(o=>o.u===sess).reverse(),pn=o=>o.s==="পেন্ডিং"||o.s==="প্রসেসিং",pen=O.filter(pn).length,spent=O.filter(o=>o.s!=="বাতিল").reduce((s,o)=>s+o.t,0),ini=eh((u.n||"?").trim().charAt(0).toUpperCase()),
  tb=t=>`<div class="pf-tb"><button class="pbk2" onclick="pfBk()" aria-label="ফিরুন">‹</button><b>${t}</b></div>`;
@@ -701,7 +740,7 @@ function pfHtml(v){PFV=v;const _ns=sess?ld("gv_nbseen_"+sess,0):0;if(v==="inbox"
   return tb("📦 অর্ডার হিস্ট্রি")+`<div class="pfb"><div class="bar" style="padding-top:0">${["","পেন্ডিং","সম্পন্ন","বাতিল"].map(x=>`<button class="chip ${x===OHF?"on":""}" onclick="ohf('${x}')">${x||"সব"} (${bn(cn(x))})</button>`).join("")}</div>
   ${l.length?l.map((o,i)=>{const c=OSC[o.s]||["✅","#4ade80"];return `<div class="ohc" style="animation-delay:${i*45}ms"><div class="ohr"><b>#${o.id}</b><span class="opl" style="--c:${c[1]}">${c[0]} ${eh(o.s)}</span></div><small>📅 ${bn(o.d)}</small><div class="oht">${eh(o.l)}</div>${o.cr&&o.cr.length?"<small>🔐 লগইন-ভিত্তিক টপ-আপ</small>":""}<div class="ohr"><small>${eh(pm(o.m))}${o.dc?" · 🎟️ -"+tk(o.dc):""}</small><b>${tk(o.t)}</b></div>${o.dv?`<div class="ohd" data-v="${eh(o.dv)}" onclick="cpy(this.dataset.v,1)" style="cursor:pointer">🎁 ${eh(o.dv)} <span style="opacity:.7">📋 কপি</span></div>`:""}${cdHtml(o)}<button class="btn x" style="margin:2px 0 0;padding:10px" onclick="rcOpen(${o.id})">🧾 রসিদ</button>${pn(o)?'<div class="ohw"><span class="hg">⏳</span><span>কনফার্মেশনের অপেক্ষায়<b class="dts"><i>.</i><i>.</i><i>.</i></b></span></div>':""}</div>`}).join(""):'<p class="empty">কোনো অর্ডার নেই 📭</p>'}</div>`}
  if(v==="inbox"){const l=ld(ibK(),[]);return tb("🔔 নোটিফিকেশন")+`<div class="pfb">${l.length?l.map(n=>`<div class="ohc"><div class="ohr"><b>${eh(n.t)}</b>${n.ts>_ns?'<span class="opl" style="--c:#4ade80">নতুন</span>':""}</div><div class="oht">${eh(n.b||"")}</div><small>📅 ${bn(new Date(n.ts).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}))}</small></div>`).join(""):'<p class="empty">কোনো নোটিফিকেশন নেই 🔔</p>'}</div>`}
-  if(v==="edit"){PFA=im(u.av);return tb("✏️ প্রোফাইল এডিট")+`<div class="pfb"><div class="pav" id="pfa">${PFA?`<img src="${PFA}">`:ini}</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px"><button class="btn" onclick="pickImg(d=>{PFA=d;pfAv($('pfn').value)})">📷 ছবি বদলান</button><button class="btn x" style="width:auto;margin:0" onclick="PFA='';pfAv($('pfn').value)">সরান</button></div><input id="pfn" value="${eh(u.n)}" placeholder="পূর্ণ নাম"><input value="${eh(sess)}" disabled style="opacity:.6"><button class="btn" style="width:100%;margin-top:8px" onclick="pfSave()">✅ সেভ করুন</button></div>`}
+  if(v==="edit"){PFA=im(u.av);return tb("✏️ প্রোফাইল এডিট")+`<div class="pfb"><div class="pav" id="pfa">${PFA?`<img src="${PFA}">`:ini}</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px"><button class="btn" onclick="pickImg(d=>{PFA=d;pfAv($('pfn').value)})">📷 ছবি বদলান</button><button class="btn x" style="width:auto;margin:0" onclick="PFA='';pfAv($('pfn').value)">সরান</button></div><input id="pfn" value="${eh(u.n)}" placeholder="পূর্ণ নাম"><input id="pfe" type="email" value="${eh(u.em||'')}" placeholder="ইমেইল / জিমেইল (ঐচ্ছিক)"><input value="${eh(sess)}" disabled style="opacity:.6"><button class="btn" style="width:100%;margin-top:8px" onclick="pfSave()">✅ সেভ করুন</button></div>`}
  if(v==="pw")return tb("🔑 পাসওয়ার্ড বদলান")+`<div class="pfb"><input id="pw0" type="password" placeholder="বর্তমান পাসওয়ার্ড"><input id="pw1" type="password" placeholder="নতুন পাসওয়ার্ড (কমপক্ষে ৬)"><input id="pw2" type="password" placeholder="নতুন পাসওয়ার্ড আবার দিন"><button class="btn" style="width:100%;margin-top:8px" onclick="pfPw()">🔑 পরিবর্তন করুন</button></div>`;
  const mi=(ic,t,x,f,c)=>`<button class="pmn ${c||""}" onclick="${f}"><i>${ic}</i><span>${t}</span>${x?`<em>${x}</em>`:""}<em>›</em></button>`;
  return `<div class="pf-hd"><button class="pbk2 pf-x" onclick="pfX()" aria-label="বন্ধ">✕</button><div class="pav">${im(u.av)?`<img src="${im(u.av)}">`:ini}</div><h2>${eh(u.n)}</h2><small>📱 ${bn(sess)}</small>${u.id?`<small onclick="cpy('${u.id}')" style="cursor:pointer">🆔 ইউজার আইডি: <b>${u.id}</b> 📋</small>`:""}${u.t?`<small>সদস্য · ${bn(new Date(u.t).toISOString().slice(0,10))}</small>`:""}</div>
