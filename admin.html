@@ -374,22 +374,24 @@ async function syncFirebase(){
   }catch(e){}finally{SN.busy=0}
 }
 async function syncAdminPass(){
-  if(!CHAT_DB||ld("gva",null))return;
-  try{const r=await cdb("GET","cfg/adminpass");if(r&&r.h)sv("gva",r.h)}catch(e){}
+  if(!CHAT_DB)return;
+  try{const r=await cget("cfg/adminpass");if(r&&r.h&&r.h!==ld("gva",null))sv("gva",r.h)}catch(e){}
 }
 function lgv(){const s=!!ld("gva",null);$("lg").innerHTML=`<div class="lb"><div class="lo">🎮</div><h2>Game<i>Vault</i> Admin</h2><p class="mu">${s?"অ্যাডমিন পাসওয়ার্ড দিন":"প্রথমবার — অ্যাডমিন পাসওয়ার্ড সেট করুন"}</p><input id="lp" type="password" placeholder="পাসওয়ার্ড${s?"":" (কমপক্ষে ৬ অক্ষর)"}">${s?"":'<input id="lp2" type="password" placeholder="আবার দিন">'}<button class="b w" onclick="login()">${s?"প্রবেশ করুন":"সেট করে প্রবেশ"}</button></div>`}
 async function login(){
   if(Date.now()<ld("gva_lock",0))return toast("⏳ কিছুক্ষণ পরে চেষ্টা করুন");
-  const p=$("lp").value,a=ld("gva",null);
+  const p=$("lp").value;let a=ld("gva",null);
+  if(CHAT_DB){const r=await cget("cfg/adminpass");if(r&&r.h&&r.h!==a){sv("gva",r.h);a=r.h}}
   if(!a){
     if(p.length<6)return toast("❌ কমপক্ষে ৬ অক্ষর");
     if(p!==$("lp2").value)return toast("❌ দুটি পাসওয়ার্ড মেলেনি");
     const hash=await sha(p);
     sv("gva",hash);
-    if(CHAT_DB)cdb("PUT","cfg/adminpass",{h:hash});
+    if(CHAT_DB)await cdb("PUT","cfg/adminpass",{h:hash});
   }else{
     const hash=await sha(p);
     if(hash!==a){const f=ld("gva_f",0)+1;sv("gva_f",f>=5?0:f);if(f>=5)sv("gva_lock",Date.now()+30000);return toast("❌ ভুল পাসওয়ার্ড")}
+    if(CHAT_DB){const r=await cget("cfg/adminpass");if(r===null)cdb("PUT","cfg/adminpass",{h:hash})}
   }
   sv("gva_f",0);sessionStorage.setItem("gva_ok","1");start()}
 function start(){syncFirebase();setInterval(syncFirebase,3000);nfBanner();uidSync();lcPrev=lcUnread();hbadge();hb();setInterval(lcLoop,2500);lcLoop();$("lg").hidden=true;$("app").hidden=false;nav();render()}
