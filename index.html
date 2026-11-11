@@ -550,6 +550,33 @@ const GCS=(()=>{const P=(v,r)=>Math.round(v*r/10)*10,f=(id,n,e,h,rg,gt,r,vs,ac,d
 const gcMig=()=>{try{if(localStorage.getItem("gv_gcm"))return;const o=JSON.parse(localStorage.getItem("gv_games"));if(Array.isArray(o)&&o.length&&!o.some(x=>x.gc)){const mx=o.reduce((m,x)=>Math.max(m,x.id||0),100);GCS.forEach((g,i)=>o.push({...JSON.parse(JSON.stringify(g)),id:mx+1+i}));localStorage.setItem("gv_games",JSON.stringify(o))}localStorage.setItem("gv_gcm","1")}catch(e){}};
 gcMig();
 G0.push(...GCS.map(g=>JSON.parse(JSON.stringify(g))));
+const cget=p=>fetch(CHAT_DB.replace(/\/$/,"")+"/"+p+".json").then(r=>r.ok?r.json():undefined).catch(()=>undefined);
+async function syncStoreData(){
+  if(!CHAT_DB)return;
+  try{
+    const st=await cget("store/gv");
+    if(st===undefined||st===null||String(st)===localStorage.getItem("gv_gst"))return;
+    const g=await cget("store/games");
+    if(g===undefined)return;
+    G.length=0;
+    if(g){const a=(Array.isArray(g)?g:Object.values(g)).filter(Boolean);a.forEach(x=>{x.k=x.k||[]});localStorage.setItem("gv_games",JSON.stringify(a));G.push(...a)}
+    else{localStorage.removeItem("gv_games");G.push(...G0)}
+    localStorage.setItem("gv_gst",String(st));
+    if(typeof drawCats==="function")drawCats();if(typeof draw==="function")draw();if(typeof drawSlider==="function")drawSlider();
+  }catch(e){}
+}
+async function syncMine(){
+  if(!CHAT_DB||!sess)return;
+  try{
+    const m=await cget("uo/"+lcP(sess));
+    if(m){const O=ld("gv_orders",[]);let ch=0;
+      Object.values(m).forEach(r=>{const o=O.find(x=>x.id===r.id&&x.u===sess);if(o&&(o.s!==r.s||(o.dv||"")!==(r.dv||""))){o.s=r.s;o.dv=r.dv||"";if(r.tl)o.tl=r.tl;ch=1}});
+      if(ch)sv("gv_orders",O)}
+    const c=await cget("users/"+lcP(sess));
+    if(c&&c.h){const U=ld("gv_users",{}),u=U[sess];if(u&&(u.h!==c.h||!!u.ban!==!!c.ban)){u.h=c.h;if(c.ban)u.ban=1;else delete u.ban;sv("gv_users",U)}}
+  }catch(e){}
+}
+setInterval(()=>{if(!document.hidden)syncStoreData()},1000);setInterval(()=>{if(!document.hidden)syncMine()},2000);document.addEventListener("visibilitychange",()=>{if(!document.hidden){syncStoreData();syncMine()}});
 const G=(()=>{try{const o=JSON.parse(localStorage.getItem("gv_games"));if(Array.isArray(o)&&o.length)return o}catch(e){}return G0})();
 let L=(()=>{try{return JSON.parse(localStorage.getItem("gv_lang"))||"bn"}catch(e){return"bn"}})();const bn=n=>L==="en"?String(n):String(n).replace(/\d/g,d=>"০১২৩৪৫৬৭৮৯"[d]),tk=n=>"৳"+bn(n.toLocaleString("en-IN")),$=i=>document.getElementById(i);
 const cats=()=>["সব",...new Set(G.filter(g=>!g.x&&(view==="p"?g.t:view==="c"?g.gc:!g.gc)).map(g=>view==="p"?g.n:view==="c"?(g.gt||"অন্যান্য"):g.c))];
@@ -642,17 +669,19 @@ function authM(m){mode=m||mode;const r=mode==="up",G=document.body.classList.con
   if(G){$("gc").innerHTML=h}else{cartOpen(0);openM(h)}}
 const normPh=s=>{s=String(s||"").replace(/[\u09e6-\u09ef]/g,d=>"০১২৩৪৫৬৭৮৯".indexOf(d)).replace(/[\u0660-\u0669]/g,d=>d.charCodeAt(0)-1632).replace(/[\u06f0-\u06f9]/g,d=>d.charCodeAt(0)-1776).replace(/[^\d+]/g,"");if(s.startsWith("+880"))s=s.slice(4);else if(s.startsWith("00880"))s=s.slice(5);else if(s.startsWith("880")&&s.length>=12)s=s.slice(3);s=s.replace(/\+/g,"");if(/^1\d{9}$/.test(s))s="0"+s;return s};
 function devLbl(){const a=navigator.userAgent;return/Android/.test(a)?"Android":/iPhone|iPad/.test(a)?"iOS":/Windows/.test(a)?"Windows":/Mac/.test(a)?"Mac":"অন্যান্য"}
-function doAuth(){if($("ld"))return;const lk=ld("gv_lock",0);if(Date.now()<lk)return toast("⏳ "+bn(Math.ceil((lk-Date.now())/1000))+" সেকেন্ড পরে চেষ্টা করুন");
+async function doAuth(){if(window._au)return;window._au=1;try{await doAuth0()}finally{window._au=0}}
+async function doAuth0(){if($("ld"))return;const lk=ld("gv_lock",0);if(Date.now()<lk)return toast("⏳ "+bn(Math.ceil((lk-Date.now())/1000))+" সেকেন্ড পরে চেষ্টা করুন");
   const p=normPh($("ap").value),w=$("aw").value,U=ld("gv_users",{});
   if(!/^01\d{9}$/.test(p))return toast("❌ সঠিক মোবাইল নম্বর দিন (যেমন 01XXXXXXXXX)"+(p.length!==11?" — "+p.length+" ডিজিট দিয়েছেন":""));
+  if(CHAT_DB){const c=await cget("users/"+lcP(p));if(c&&c.h){U[p]=Object.assign({},U[p]||{},c);if(!c.ban)delete U[p].ban;sv("gv_users",U)}}
   if(U[p]&&U[p].ban)return toast("🚫 এই অ্যাকাউন্ট ব্লক করা হয়েছে");
   if(mode==="up"){const n=$("an").value.trim();
     if(n.length<2)return toast("❌ নাম দিন");if(w.length<6)return toast("❌ পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");
     if(w!==$("aw2").value)return toast("❌ দুই পাসওয়ার্ড মেলেনি");if(!$("ag").checked)return toast("❌ শর্তে সম্মতি দিন");
     if(U[p])return toast("⚠️ এই নম্বরে অ্যাকাউন্ট আছে — লগইন করুন");
-    U[p]={n,h:H(p+w),t:Date.now(),id:uidNew(U),ll:Date.now(),lc:1,dv:devLbl()};sv("gv_users",U);toast("✅ অ্যাকাউন্ট খোলা হয়েছে")}
+    U[p]={n,h:H(p+w),t:Date.now(),id:uidNew(U),ll:Date.now(),lc:1,dv:devLbl()};sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(p),{n:U[p].n,h:U[p].h,t:U[p].t,id:U[p].id,ll:U[p].ll,lc:U[p].lc,dv:U[p].dv});cdb("PUT","sync/ou",Date.now())}toast("✅ অ্যাকাউন্ট খোলা হয়েছে")}
   else{const u=U[p];if(!u||u.h!==H(p+w)){const f=(ld("gv_f",0))+1;sv("gv_f",f);if(f>=5){sv("gv_lock",Date.now()+30000);sv("gv_f",0)}return toast("❌ নম্বর বা পাসওয়ার্ড ভুল")}
-    sv("gv_f",0);u.ll=Date.now();u.lc=(u.lc||0)+1;u.dv=devLbl();sv("gv_users",U);toast("✅ লগইন সফল")}
+    sv("gv_f",0);u.ll=Date.now();u.lc=(u.lc||0)+1;u.dv=devLbl();sv("gv_users",U);if(CHAT_DB){cdb("PUT","users/"+lcP(p),u);cdb("PUT","sync/ou",Date.now())}toast("✅ লগইন সফল")}
   sess=p;sv("gv_sess",p);closeAll();draw();loadIn(mode==="up"?"অ্যাকাউন্ট তৈরি হচ্ছে…":"লগইন হচ্ছে…",()=>{enterApp();if(window._co){window._co=0;checkout()}})}
 function loadIn(m,cb){const d=document.createElement("div");d.id="ld";d.innerHTML=`<div class="sl">🎮</div><b>Game<i>Vault</i></b><div class="sb"></div><p>${m}</p>`;document.body.append(d);buzz();setTimeout(()=>{cb();d.classList.add("out");setTimeout(()=>d.remove(),500)},1700)}
 function acct(){pfOpen("home")}
@@ -683,10 +712,15 @@ function logout(){sess=null;sv("gv_sess",null);closeAll();draw();toast("লগ�
 function checkout(){CP=null;if(!Object.keys(cart).length)return toast("কার্ট খালি");if((ld("gv_users",{})[sess]||{}).ban)return toast("🚫 আপনার অ্যাকাউন্ট ব্লক করা হয়েছে");if(syncCart())return toast("❌ কার্টের কিছু আইটেম এখন পাওয়া যাচ্ছে না — সরিয়ে দিন");
   if(!sess){window._co=1;toast("🔒 কিনতে আগে লগইন করুন");return authM("in")}
   cartOpen(0);openM(payHtml());pinfo()}
-function pay(){const dc=cpv(),cc=cpc(),pda=dc-cc;if($("tx").value.trim().length<6)return toast("❌ ট্রানজেকশন আইডি দিন");const sn=normPh($("sn").value),pp=pays().find(x=>x.n===$("pm").value);if(pp&&pp.num&&!/^01[3-9]\d{8}$/.test(sn))return toast("❌ যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন");
-  const O=ld("gv_orders",[]),id=O.reduce((m,o)=>Math.max(m,o.id),1000)+1;
+async function pay(){if(window._pay)return;window._pay=1;try{await payGo()}finally{window._pay=0}}
+async function payGo(){const dc=cpv(),cc=cpc(),pda=dc-cc;if($("tx").value.trim().length<6)return toast("❌ ট্রানজেকশন আইডি দিন");const sn=normPh($("sn").value),pp=pays().find(x=>x.n===$("pm").value);if(pp&&pp.num&&!/^01[3-9]\d{8}$/.test(sn))return toast("❌ যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন");
+  const O=ld("gv_orders",[]);let id=O.reduce((m,o)=>Math.max(m,o.id),1000)+1;
+  if(CHAT_DB){try{const hint=+(await cget("cfg/oc"))||0;if(hint>=id)id=hint+1;
+    for(let k=0;k<40;k++){const r=await fetch(CHAT_DB.replace(/\/$/,"")+"/orders/"+id+".json",{method:"PUT",headers:{"Content-Type":"application/json","if-match":"null_etag"},body:JSON.stringify({id,res:1})});if(r.status===412){id++;continue}break}
+    cdb("PUT","cfg/oc",id)}catch(e){}}
   O.push({id,u:sess,l:Object.values(cart).map(x=>x.lbl+(x.sub?" ["+x.sub+"]":"")+" ×"+bn(x.q)).join(", "),gc:Object.values(cart).filter(x=>x.gc).map(x=>({l:x.lbl,q:x.q,v:x.gc.v,to:x.gc.to})),cr:Object.values(cart).filter(x=>x.cr).map(x=>({l:x.lbl,...x.cr})),t:total()-dc,dc,pd:pda,cp:cc?CP:"",m:$("pm").value,s:"পেন্ডিং",x:$("tx").value.trim(),sn:sn||"",ts:Date.now(),d:new Date().toISOString().slice(0,10)});
   if(SHOT){const k="s"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);try{localStorage.setItem("gv_shot_"+k,SHOT);O[O.length-1].sh=k}catch(e){setTimeout(()=>toast("⚠️ স্ক্রিনশট সেভ হয়নি (জায়গা কম)"),2700)}SHOT=""}
+  if(CHAT_DB){cdb("PUT","orders/"+id,O[O.length-1]);cdb("PUT","sync/ou",Date.now())}
   sv("gv_orders",O);if(cc){const S=ld("gv_set",{}),c=S.cp.find(x=>x.code===CP);c.used=(c.used||0)+1;sv("gv_set",S)}pdUse(pda);CP=null;cart={};sv("gv_cart",cart);drawCart();
   rcOpen(id,1);toast("✅ পেমেন্ট জমা হয়েছে")}
 let RI=null;
@@ -823,6 +857,7 @@ function closeNav(){const b=document.querySelector("#nv button");if(!showWish&&!
 $("ov").addEventListener("click",closeNav);
 addEventListener("load",()=>setTimeout(()=>$("sp").classList.add("out"),900));
 new IntersectionObserver((es,o)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");o.unobserve(e.target)}}),{threshold:.2}).observe&&document.querySelectorAll(".perks div").forEach((d,i)=>{d.style.transitionDelay=i*90+"ms";new IntersectionObserver((es,o)=>es.forEach(e=>{if(e.isIntersecting){d.classList.add("in");o.disconnect()}})).observe(d)});
+syncStoreData();syncMine();
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 
 function enterApp(sk){const g=$("gate");document.body.classList.remove("g");document.body.classList.add("ent");g.classList.add("out");setTimeout(()=>{if(g.classList.contains("out"))g.style.display="none"},650);

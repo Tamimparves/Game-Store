@@ -271,7 +271,7 @@ textarea.gvd-in{min-height:96px;resize:vertical}
 <div id="md" onclick="if(event.target===this)closeM()"></div>
 <div id="ts"></div>
 <script>
-const $=i=>document.getElementById(i),ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const $=i=>document.getElementById(i),ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},sv=(k,v)=>{localStorage.setItem(k,JSON.stringify(v));try{if(k==="gv_orders"||k==="gv_users")cloudKick()}catch(e){}};
 
 // ===== ইউনিক ইউজার আইডি (GV10001, GV10002 …) =====
 const uidFix=U=>{let ch=false,mx=Math.max(+(localStorage.getItem("gv_uidn")||0),10000);const used=new Set();
@@ -308,7 +308,7 @@ const GCS=(()=>{const P=(v,r)=>Math.round(v*r/10)*10,f=(id,n,e,h,rg,gt,r,vs,ac,d
 const gcMig=()=>{try{if(localStorage.getItem("gv_gcm"))return;const o=JSON.parse(localStorage.getItem("gv_games"));if(Array.isArray(o)&&o.length&&!o.some(x=>x.gc)){const mx=o.reduce((m,x)=>Math.max(m,x.id||0),100);GCS.forEach((g,i)=>o.push({...JSON.parse(JSON.stringify(g)),id:mx+1+i}));localStorage.setItem("gv_games",JSON.stringify(o))}localStorage.setItem("gv_gcm","1")}catch(e){}};
 gcMig();
 
-const games=()=>ld("gv_games",null)||JSON.parse(JSON.stringify([...SEED,...GCS])),saveG=l=>{const _o=ld("gv_games",null);try{sv("gv_games",l);try{annDiff(_o,l)}catch(e){}return true}catch(e){toast("❌ স্টোরেজ ভরে গেছে — ছবি কমান");return false}};
+const games=()=>ld("gv_games",null)||JSON.parse(JSON.stringify([...SEED,...GCS])),saveG=l=>{const _o=ld("gv_games",null);try{sv("gv_games",l);if(CHAT_DB){const _t=Date.now();localStorage.setItem("gv_gst",String(_t));cdb("PUT","store/games",l);cdb("PUT","store/gv",_t)}try{annDiff(_o,l)}catch(e){}return true}catch(e){toast("❌ স্টোরেজ ভরে গেছে — ছবি কমান");return false}};
 let tab="d",ofl="",oq="";
 function toast(m){const t=$("ts");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2200)}
 let pgOpen=false;
@@ -324,12 +324,75 @@ const THEMES={royal:{n:"রয়্যাল ভায়োলেট",bg:"#070
 function applyTheme(s){const t=THEMES[s.th]||THEMES.royal,r=document.documentElement.style,hx=/^#[0-9a-f]{6}$/i,a=hx.test(s.c1||"")?s.c1:t.a,b=hx.test(s.c2||"")?s.c2:t.b;["bg","bg2","card","gold"].forEach(k=>r.setProperty("--"+k,t[k]));r.setProperty("--a",a);r.setProperty("--b",b);r.setProperty("--g","linear-gradient(135deg,"+a+","+b+")");const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.bg}
 applyTheme(ld("gv_set",{}));
 // ===== লগইন =====
+/* ===== Cloud sync (admin) ===== */
+var _ck;function cloudKick(){clearTimeout(_ck);_ck=setTimeout(function(){cloudPush().catch(function(){})},400)}
+const cget=p=>fetch(CHAT_DB.replace(/\/$/,"")+"/"+p+".json").then(r=>r.ok?r.json():undefined).catch(()=>undefined);
+const SN={o:{},ou:{},u:{},ok:0,busy:0};let _sou=null;
+async function cloudPush(){
+  if(!CHAT_DB||!SN.ok)return;
+  const O=ld("gv_orders",[]),U=ld("gv_users",{}),co={},cu={};let ch=0;
+  O.forEach(o=>{co[o.id]=JSON.stringify(o)});Object.keys(U).forEach(p=>{cu[lcP(p)]=JSON.stringify(U[p])});
+  for(const o of O){const id=o.id;if(SN.o[id]!==co[id]){SN.o[id]=co[id];SN.ou[id]=lcP(o.u);ch=1;
+    cdb("PUT","orders/"+id,o);cdb("PUT","uo/"+lcP(o.u)+"/"+id,{id:o.id,u:o.u,s:o.s,dv:o.dv||"",tl:o.tl||[]})}}
+  for(const id in SN.o){if(!(id in co)){const ph=SN.ou[id];delete SN.o[id];delete SN.ou[id];ch=1;
+    cdb("DELETE","orders/"+id);if(ph)cdb("DELETE","uo/"+ph+"/"+id)}}
+  for(const k in cu){if(SN.u[k]!==cu[k]){SN.u[k]=cu[k];ch=1;cdb("PUT","users/"+k,JSON.parse(cu[k]))}}
+  for(const k in SN.u){if(!(k in cu)){delete SN.u[k];ch=1;cdb("DELETE","users/"+k)}}
+  if(ch){_sou=Date.now();cdb("PUT","sync/ou",_sou)}
+}
+async function syncFirebase(){
+  if(!CHAT_DB||SN.busy)return;SN.busy=1;
+  try{
+    let ch=0;const st=await cget("sync/ou");
+    if(st===undefined)return;
+    if(!SN.ok||String(st)!==String(_sou)){
+      const co=await cget("orders"),cu=await cget("users");
+      if(co===undefined||cu===undefined)return;
+      const cO=co||{},cU=cu||{},O=ld("gv_orders",[]),U=ld("gv_users",{});
+      const map={};O.forEach(o=>{map[o.id]=o});
+      for(const id in cO){const c=cO[id];if(!c||c.id==null||!c.u)continue;const cs=JSON.stringify(c),l=map[c.id];
+        if(!l){O.push(c);map[c.id]=c;SN.o[c.id]=cs;SN.ou[c.id]=lcP(c.u);ch=1}
+        else if(SN.o[c.id]===undefined){SN.o[c.id]=cs;SN.ou[c.id]=lcP(c.u)}
+        else if(JSON.stringify(l)===SN.o[c.id]&&cs!==SN.o[c.id]){O[O.indexOf(l)]=c;map[c.id]=c;SN.o[c.id]=cs;ch=1}}
+      for(const id in SN.o){if(!(id in cO)&&map[id]&&JSON.stringify(map[id])===SN.o[id]){O.splice(O.indexOf(map[id]),1);delete map[id];delete SN.o[id];delete SN.ou[id];ch=1}}
+      for(const k in cU){const c=cU[k];if(!c)continue;const cs=JSON.stringify(c),l=U[k];
+        if(!l){U[k]=c;SN.u[k]=cs;ch=1}
+        else if(SN.u[k]===undefined){SN.u[k]=cs}
+        else if(JSON.stringify(l)===SN.u[k]&&cs!==SN.u[k]){U[k]=c;SN.u[k]=cs;ch=1}}
+      for(const k in SN.u){if(!(k in cU)&&U[k]&&JSON.stringify(U[k])===SN.u[k]){delete U[k];delete SN.u[k];ch=1}}
+      if(ch){localStorage.setItem("gv_orders",JSON.stringify(O));localStorage.setItem("gv_users",JSON.stringify(U))}
+      _sou=st;
+    }
+    const gv=await cget("store/gv");
+    if(gv===null){const lg=ld("gv_games",null);if(Array.isArray(lg)&&lg.length){const t=Date.now();localStorage.setItem("gv_gst",String(t));cdb("PUT","store/games",lg);cdb("PUT","store/gv",t)}}
+    else if(gv!==undefined&&String(gv)!==localStorage.getItem("gv_gst")){
+      const g=await cget("store/games");
+      if(g!==undefined){if(g){localStorage.setItem("gv_games",JSON.stringify(Array.isArray(g)?g:Object.values(g)))}else localStorage.removeItem("gv_games");localStorage.setItem("gv_gst",String(gv));ch=1}}
+    SN.ok=1;await cloudPush();
+    const a=document.activeElement;
+    if(ch&&!$("app").hidden&&!$("md").classList.contains("on")&&!document.querySelector(".gvd-ov")&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))render();
+  }catch(e){}finally{SN.busy=0}
+}
+async function syncAdminPass(){
+  if(!CHAT_DB||ld("gva",null))return;
+  try{const r=await cdb("GET","cfg/adminpass");if(r&&r.h)sv("gva",r.h)}catch(e){}
+}
 function lgv(){const s=!!ld("gva",null);$("lg").innerHTML=`<div class="lb"><div class="lo">🎮</div><h2>Game<i>Vault</i> Admin</h2><p class="mu">${s?"অ্যাডমিন পাসওয়ার্ড দিন":"প্রথমবার — অ্যাডমিন পাসওয়ার্ড সেট করুন"}</p><input id="lp" type="password" placeholder="পাসওয়ার্ড${s?"":" (কমপক্ষে ৬ অক্ষর)"}">${s?"":'<input id="lp2" type="password" placeholder="আবার দিন">'}<button class="b w" onclick="login()">${s?"প্রবেশ করুন":"সেট করে প্রবেশ"}</button></div>`}
-async function login(){if(Date.now()<ld("gva_lock",0))return toast("⏳ কিছুক্ষণ পরে চেষ্টা করুন");const p=$("lp").value,a=ld("gva",null);
-  if(!a){if(p.length<6)return toast("❌ কমপক্ষে ৬ অক্ষর");if(p!==$("lp2").value)return toast("❌ দুটি পাসওয়ার্ড মেলেনি");sv("gva",await sha(p))}
-  else if(await sha(p)!==a){const f=ld("gva_f",0)+1;sv("gva_f",f>=5?0:f);if(f>=5)sv("gva_lock",Date.now()+30000);return toast("❌ ভুল পাসওয়ার্ড")}
+async function login(){
+  if(Date.now()<ld("gva_lock",0))return toast("⏳ কিছুক্ষণ পরে চেষ্টা করুন");
+  const p=$("lp").value,a=ld("gva",null);
+  if(!a){
+    if(p.length<6)return toast("❌ কমপক্ষে ৬ অক্ষর");
+    if(p!==$("lp2").value)return toast("❌ দুটি পাসওয়ার্ড মেলেনি");
+    const hash=await sha(p);
+    sv("gva",hash);
+    if(CHAT_DB)cdb("PUT","cfg/adminpass",{h:hash});
+  }else{
+    const hash=await sha(p);
+    if(hash!==a){const f=ld("gva_f",0)+1;sv("gva_f",f>=5?0:f);if(f>=5)sv("gva_lock",Date.now()+30000);return toast("❌ ভুল পাসওয়ার্ড")}
+  }
   sv("gva_f",0);sessionStorage.setItem("gva_ok","1");start()}
-function start(){nfBanner();uidSync();lcPrev=lcUnread();hbadge();hb();setInterval(lcLoop,2500);lcLoop();$("lg").hidden=true;$("app").hidden=false;nav();render()}
+function start(){syncFirebase();setInterval(syncFirebase,3000);nfBanner();uidSync();lcPrev=lcUnread();hbadge();hb();setInterval(lcLoop,2500);lcLoop();$("lg").hidden=true;$("app").hidden=false;nav();render()}
 function out(){sessionStorage.removeItem("gva_ok");location.reload()}
 addEventListener("keydown",e=>{if(e.key==="Enter"&&!$("lg").hidden&&e.target.tagName==="INPUT")login()});
 // ===== নোটিফিকেশন =====
@@ -634,8 +697,8 @@ function saveWa(){const w=$("wa").value.replace(/\s/g,"");if(w&&!/^880\d{10}$/.t
 async function cp(){const a=ld("gva",null),n=$("np").value;if(await sha($("op").value)!==a)return toast("❌ বর্তমান পাসওয়ার্ড ভুল");if(n.length<6)return toast("❌ নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর");sv("gva",await sha(n));$("op").value=$("np").value="";toast("✅ পাসওয়ার্ড বদলানো হয়েছে")}
 function bk(){const o={};KS.forEach(k=>o[k]=ld(k,null));dl("gamevault-backup-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(o),"application/json")}
 function rs(i){const f=i.files[0];if(!f)return;f.text().then(async t=>{try{const o=JSON.parse(t),ok=o&&(o.gv_games==null||Array.isArray(o.gv_games))&&(o.gv_orders==null||Array.isArray(o.gv_orders))&&(o.gv_users==null||(typeof o.gv_users==="object"&&!Array.isArray(o.gv_users)));if(!ok)throw 0;if(!await gvConfirm("বর্তমান ডেটা রিপ্লেস হবে। নিশ্চিত?",{danger:1,icon:"♻️",title:"ব্যাকআপ রিস্টোর",ok:"রিস্টোর করুন"}))return;KS.forEach(k=>{if(o[k]!=null)sv(k,o[k])});toast("✅ রিস্টোর হয়েছে");render()}catch(e){toast("❌ ব্যাকআপ ফাইলটি ঠিক নয়")}})}
-async function rg(){if(await gvConfirm("সব এডিট মুছে মূল গেম তালিকা ফিরবে। নিশ্চিত?",{danger:1,icon:"♻️",title:"ডিফল্টে ফিরবেন?",ok:"হ্যাঁ, ফিরুন"})){localStorage.removeItem("gv_games");toast("✅ ডিফল্টে ফেরানো হয়েছে")}}
-if(sessionStorage.getItem("gva_ok")&&ld("gva",null))start();else lgv();
+async function rg(){if(await gvConfirm("সব এডিট মুছে মূল গেম তালিকা ফিরবে। নিশ্চিত?",{danger:1,icon:"♻️",title:"ডিফল্টে ফিরবেন?",ok:"হ্যাঁ, ফিরুন"})){localStorage.removeItem("gv_games");if(CHAT_DB){const _t=Date.now();localStorage.setItem("gv_gst",String(_t));cdb("DELETE","store/games");cdb("PUT","store/gv",_t)}toast("✅ ডিফল্টে ফেরানো হয়েছে")}}
+syncAdminPass().then(()=>{if(sessionStorage.getItem("gva_ok")&&ld("gva",null))start();else lgv()});
 </script>
 <script>
 /* ===== GV Premium Dialog (alert / confirm / prompt replacement) ===== */
